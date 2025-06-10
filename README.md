@@ -1,244 +1,202 @@
 # Pulsar MCP Server
 
-Un serveur MCP (Message Context Protocol) pour Apache Pulsar qui permet aux modèles IA d'interagir avec les topics, producteurs et consommateurs Pulsar de manière native.
+A Model Context Protocol (MCP) server for Apache Pulsar that provides tools to interact with Pulsar clusters through MCP-compatible clients.
 
-## 🚀 Fonctionnalités
+## Features
 
-- **Publication de messages** sur les topics Pulsar
-- **Consommation de messages** depuis les topics Pulsar
-- **Gestion des topics** (création, suppression, liste)
-- **Statistiques détaillées** des topics et souscriptions
-- **Authentification JWT/TLS** pour les clusters sécurisés
-- **Interface MCP standard** compatible avec Claude Desktop et autres clients MCP
+- **Publish Messages**: Send messages to Pulsar topics with optional properties
+- **Consume Messages**: Receive messages from topics with configurable subscription settings
+- **Topic Management**: Create, delete, and list topics
+- **Topic Statistics**: Get detailed statistics and metadata about topics
+- **Flexible Configuration**: Environment-based configuration with sensible defaults
 
-## 📋 Prérequis
+## Installation
 
-- Python 3.8+
-- Apache Pulsar en cours d'exécution
-- Accès réseau aux services Pulsar (ports 6650 et 8080 par défaut)
+### From Source
 
-## 🛠️ Installation
-
-1. **Cloner le projet** :
+1. Clone the repository:
 ```bash
-git clone <votre-repo>
+git clone <repository-url>
 cd pulsar-mcp-server
 ```
 
-2. **Créer un environnement virtuel** :
-```bash
-python -m venv venv
-source venv/bin/activate  # Sur Windows: venv\Scripts\activate
-```
-
-3. **Installer les dépendances** :
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-## ⚙️ Configuration
-
-Créez un fichier `.env` dans le répertoire racine :
-
+3. Install the package in development mode:
 ```bash
-# Paramètres de connexion Pulsar
-PULSAR_SERVICE_URL=pulsar://localhost:6650
-PULSAR_WEB_SERVICE_URL=http://localhost:8080
-
-# Configuration des topics et souscriptions
-TOPIC_NAME=my-topic
-SUBSCRIPTION_NAME=pulsar-mcp-subscription
-SUBSCRIPTION_TYPE=Shared
-IS_TOPIC_READ_FROM_BEGINNING=False
-
-# Authentification (optionnel)
-# PULSAR_TOKEN=eyJhbGciOiJIUzI1NiJ9...
-# PULSAR_TLS_TRUST_CERTS_FILE_PATH=/path/to/ca-cert.pem
-# PULSAR_TLS_ALLOW_INSECURE_CONNECTION=False
-
-# Descriptions des outils (optionnel)
-TOOL_PUBLISH_DESCRIPTION=Publishes information to the configured Pulsar topic
-TOOL_CONSUME_DESCRIPTION=Consumes information from the configured Pulsar topic
+pip install -e .
 ```
 
-### Types de souscription supportés :
-- `Exclusive` : Un seul consommateur
-- `Shared` : Partage entre plusieurs consommateurs
-- `Failover` : Basculement automatique
-- `KeyShared` : Partage basé sur les clés
+### Using pip (when published)
 
-## 🚀 Utilisation
-
-### Lancement du serveur
-
-**Avec transport stdio** (recommandé pour Claude Desktop) :
 ```bash
-python main.py --transport stdio
+pip install pulsar-mcp-server
 ```
 
-**Avec transport SSE** (pour développement/debug) :
+## Usage
+
+### Command Line
+
+After installation, you can run the server using:
+
 ```bash
-python main.py --transport sse --host localhost --port 3001
+pulsar-mcp-server
 ```
 
-**Options disponibles** :
-- `--transport` : stdio ou sse (défaut: stdio)
-- `--host` : Hôte pour SSE (défaut: localhost)
-- `--port` : Port pour SSE (défaut: 3001)
-- `--log-level` : DEBUG, INFO, WARNING, ERROR (défaut: INFO)
+The server will start and listen for MCP requests via stdio.
 
-## 🛠️ Outils disponibles
+### Programmatic Usage
 
-### 1. `pulsar-publish`
-Publie un message sur un topic Pulsar.
+```python
+from pulsar_mcp_server import main
 
-**Paramètres** :
-- `topic` (requis) : Nom du topic de destination
-- `message` (requis) : Contenu du message
-- `properties` (optionnel) : Propriétés du message (clé-valeur)
+# Run the server
+main()
+```
 
-### 2. `pulsar-consume`
-Consomme des messages depuis un topic Pulsar.
+### Cursor MCP Server Usage
 
-**Paramètres** :
-- `topic` (requis) : Nom du topic source
-- `subscription_name` (optionnel) : Nom de la souscription
-- `max_messages` (optionnel) : Nombre max de messages (1-100, défaut: 10)
-
-### 3. `pulsar-create-topic`
-Crée un nouveau topic Pulsar.
-
-**Paramètres** :
-- `topic` (requis) : Nom du topic à créer
-- `partitions` (optionnel) : Nombre de partitions (défaut: 1)
-
-### 4. `pulsar-delete-topic`
-Supprime un topic Pulsar existant.
-
-**Paramètres** :
-- `topic` (requis) : Nom du topic à supprimer
-
-### 5. `pulsar-list-topics`
-Liste tous les topics du cluster Pulsar.
-
-**Paramètres** : Aucun
-
-### 6. `pulsar-topic-stats`
-Récupère les statistiques d'un topic.
-
-**Paramètres** :
-- `topic` (requis) : Nom du topic
-
-## 📱 Intégration avec Claude Desktop
-
-Ajoutez cette configuration dans votre fichier de configuration Claude Desktop :
+In your `~/.cursor/mcp.json` file, add the following:
 
 ```json
-{
-    "mcpServers": {
-        "pulsar": {
-            "command": "python",
-            "args": [
-                "/chemin/vers/votre/projet/main.py"
-            ],
-            "env": {
-                "PULSAR_SERVICE_URL": "pulsar://localhost:6650",
-                "PULSAR_WEB_SERVICE_URL": "http://localhost:8080"
-            }
-        }
+  "pulsar": {
+    "command": "pulsar-mcp-server",
+    "env": {
+        "PULSAR_SERVICE_URL": "pulsar://localhost:6650",
+        "PULSAR_WEB_SERVICE_URL": "http://localhost:8080"
     }
 }
 ```
 
-## 🐳 Utilisation avec Docker
 
-### Lancer Pulsar avec Docker
+
+
+## Configuration
+
+The server can be configured using environment variables or a `.env` file:
+
 ```bash
-# Pulsar standalone
+# Pulsar connection settings
+PULSAR_SERVICE_URL=pulsar://localhost:6650
+PULSAR_WEB_SERVICE_URL=http://localhost:8080
+
+# Topic and subscription settings
+TOPIC_NAME=my-topic
+SUBSCRIPTION_NAME=pulsar-mcp-subscription
+SUBSCRIPTION_TYPE=Shared
+IS_TOPIC_READ_FROM_BEGINNING=false
+
+# Authentication (optional)
+PULSAR_TOKEN=your-jwt-token
+PULSAR_TLS_TRUST_CERTS_FILE_PATH=/path/to/certs
+PULSAR_TLS_ALLOW_INSECURE_CONNECTION=false
+```
+
+## Available Tools
+
+### pulsar_publish
+Publish a message to a Pulsar topic.
+
+**Parameters:**
+- `topic` (string, required): The Pulsar topic to publish to
+- `message` (string, required): The message content to publish
+- `properties` (object, optional): Message properties as key-value pairs
+
+### pulsar_consume
+Consume messages from a Pulsar topic.
+
+**Parameters:**
+- `topic` (string, required): The Pulsar topic to consume from
+- `subscription_name` (string, required): The subscription name
+- `max_messages` (integer, optional): Maximum number of messages to consume (default: 10)
+
+### pulsar_create_topic
+Create a new Pulsar topic.
+
+**Parameters:**
+- `topic` (string, required): Name of the topic to create
+- `partitions` (integer, optional): Number of partitions (default: 1)
+
+### pulsar_delete_topic
+Delete an existing Pulsar topic.
+
+**Parameters:**
+- `topic` (string, required): Name of the topic to delete
+
+### pulsar_list_topics
+List all topics in the Pulsar cluster.
+
+**Parameters:** None
+
+### pulsar_topic_stats
+Get statistics and metadata about a topic.
+
+**Parameters:**
+- `topic` (string, required): Name of the topic to get stats for
+
+## Development
+
+### Project Structure
+
+```
+pulsar-mcp-server/
+├── src/
+│   └── pulsar_mcp_server/
+│       ├── __init__.py          # Package entry point
+│       ├── server.py            # MCP server implementation
+│       ├── pulsar_connector.py  # Pulsar client wrapper
+│       └── settings.py          # Configuration settings
+├── pyproject.toml               # Project configuration
+├── requirements.txt             # Dependencies
+├── test_server.py              # Test script
+└── README.md                   # This file
+```
+
+### Testing
+
+Run the test script to verify the server functionality:
+
+```bash
+python test_server.py
+```
+
+### Running with Docker
+
+You can also run Pulsar locally using Docker for testing:
+
+```bash
+# Start Pulsar standalone
 docker run -it -p 6650:6650 -p 8080:8080 apachepulsar/pulsar:latest bin/pulsar standalone
 ```
 
-### Construire l'image du serveur MCP
-```bash
-# Créer un Dockerfile si nécessaire
-cat > Dockerfile << EOF
-FROM python:3.11-slim
+## Requirements
 
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+- Python 3.12+
+- Apache Pulsar cluster (local or remote)
+- MCP-compatible client
 
-COPY . .
-CMD ["python", "main.py", "--transport", "stdio"]
-EOF
+## Dependencies
 
-# Construire et exécuter
-docker build -t pulsar-mcp-server .
-docker run -it --network host pulsar-mcp-server
-```
+- `mcp>=1.1.0,<2.0`: Model Context Protocol library
+- `pulsar-client>=3.4.0`: Apache Pulsar Python client
+- `pydantic>=2.10.3`: Data validation and settings management
+- `pydantic-settings>=2.6.1`: Settings management for Pydantic
 
-## 🔒 Sécurité
+## License
 
-### Authentification JWT
-```bash
-# Dans votre .env
-PULSAR_TOKEN=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0LXVzZXIifQ...
-```
+MIT License
 
-### TLS/SSL
-```bash
-# Dans votre .env
-PULSAR_SERVICE_URL=pulsar+ssl://pulsar.example.com:6651
-PULSAR_TLS_TRUST_CERTS_FILE_PATH=/path/to/ca-cert.pem
-PULSAR_TLS_ALLOW_INSECURE_CONNECTION=False
-```
+## Contributing
 
-## 🐛 Dépannage
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-### Problèmes de connexion
-1. Vérifiez que Pulsar est en cours d'exécution
-2. Testez la connectivité : `telnet localhost 6650`
-3. Vérifiez les logs : `--log-level DEBUG`
+## Support
 
-### Erreurs d'authentification
-1. Vérifiez la validité du token JWT
-2. Confirmez les permissions sur les topics
-3. Testez avec `pulsar-admin`
-
-### Problèmes de performance
-1. Ajustez `send_timeout_millis` dans `pulsar_connector.py`
-2. Modifiez `batching_enabled` selon vos besoins
-3. Augmentez `max_messages` pour la consommation
-
-## 📊 Monitoring
-
-Le serveur génère des logs détaillés avec :
-- Connexions/déconnexions Pulsar
-- Messages publiés/consommés
-- Erreurs et exceptions
-- Statistiques de performance
-
-Format des logs :
-```
-2024-01-15 10:30:45 - pulsar_connector - INFO - Connected to Pulsar at pulsar://localhost:6650
-2024-01-15 10:30:46 - pulsar_connector - INFO - Message published to topic my-topic with ID: 123:45:0
-```
-
-## 🤝 Contribution
-
-1. Fork le projet
-2. Créez une branche feature (`git checkout -b feature/AmazingFeature`)
-3. Committez vos changements (`git commit -m 'Add AmazingFeature'`)
-4. Push vers la branche (`git push origin feature/AmazingFeature`)
-5. Ouvrez une Pull Request
-
-## 📄 Licence
-
-Ce projet est sous licence Apache 2.0. Voir le fichier `LICENSE` pour plus de détails.
-
-## 🔗 Liens utiles
-
-- [Documentation Apache Pulsar](https://pulsar.apache.org/docs/)
-- [Spécification MCP](https://modelcontextprotocol.io/)
-- [Claude Desktop](https://claude.ai/desktop)
-- [Documentation MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) 
+For issues and questions, please open an issue on the GitHub repository. 

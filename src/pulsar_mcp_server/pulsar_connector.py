@@ -3,7 +3,7 @@ import logging
 import pulsar
 from pulsar import ConsumerType, InitialPosition
 from typing import Optional, List, Dict, Any
-from settings import settings
+from .settings import settings
 
 logger = logging.getLogger(__name__)
 

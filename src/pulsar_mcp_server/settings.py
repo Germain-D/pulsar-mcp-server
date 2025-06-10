@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 
-class Settings(BaseSettings):
+class ServerSettings(BaseSettings):
     """Configuration settings for Pulsar MCP Server."""
     
     # Pulsar connection settings
@@ -30,4 +30,4 @@ class Settings(BaseSettings):
 
 
 # Global settings instance
-settings = Settings() 
+settings = ServerSettings() 
