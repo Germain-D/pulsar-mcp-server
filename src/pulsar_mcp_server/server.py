@@ -123,6 +123,59 @@ async def list_tools() -> list[types.Tool]:
                 },
                 "required": ["topic"]
             }
+        ),
+        types.Tool(
+            name="pulsar_list_connectors",
+            description="List all connectors of specified type (source or sink)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "connector_type": {
+                        "type": "string",
+                        "description": "Type of connectors to list",
+                        "enum": ["source", "sink"],
+                        "default": "source"
+                    }
+                },
+                "required": []
+            }
+        ),
+        types.Tool(
+            name="pulsar_connector_status",
+            description="Get the status of a specific connector",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "connector_name": {
+                        "type": "string",
+                        "description": "Name of the connector to get status for"
+                    }
+                },
+                "required": ["connector_name"]
+            }
+        ),
+        types.Tool(
+            name="pulsar_connector_config",
+            description="Get the configuration of a specific connector",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "connector_name": {
+                        "type": "string",
+                        "description": "Name of the connector to get configuration for"
+                    }
+                },
+                "required": ["connector_name"]
+            }
+        ),
+        types.Tool(
+            name="pulsar_all_connectors",
+            description="Get all connectors organized by type (source and sink)",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False
+            }
         )
     ]
 
@@ -222,6 +275,47 @@ async def call_tool(
                 result = {"status": "success", "topic": topic, "stats": stats}
             else:
                 result = {"status": "error", "message": f"Failed to get stats for topic '{topic}'"}
+
+        elif name == "pulsar_list_connectors":
+            connector_type = arguments.get("connector_type", "source")
+            
+            connectors = await _pulsar_connector.list_connectors(connector_type)
+            result = {
+                "status": "success", 
+                "connector_type": connector_type,
+                "connectors": connectors, 
+                "count": len(connectors)
+            }
+
+        elif name == "pulsar_connector_status":
+            connector_name = arguments.get("connector_name")
+            
+            if not connector_name:
+                raise ValueError("Connector name is required")
+            
+            status = await _pulsar_connector.get_connector_status(connector_name)
+            
+            if status:
+                result = {"status": "success", "connector_status": status}
+            else:
+                result = {"status": "error", "message": f"Failed to get status for connector '{connector_name}'"}
+
+        elif name == "pulsar_connector_config":
+            connector_name = arguments.get("connector_name")
+            
+            if not connector_name:
+                raise ValueError("Connector name is required")
+            
+            config = await _pulsar_connector.get_connector_config(connector_name)
+            
+            if config:
+                result = {"status": "success", "connector_config": config}
+            else:
+                result = {"status": "error", "message": f"Failed to get config for connector '{connector_name}'"}
+
+        elif name == "pulsar_all_connectors":
+            all_connectors = await _pulsar_connector.get_all_connectors()
+            result = {"status": "success", "connectors": all_connectors}
 
         else:
             return [types.TextContent(type="text", text=f"Unknown tool: {name}")]

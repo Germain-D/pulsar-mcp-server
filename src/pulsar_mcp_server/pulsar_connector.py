@@ -263,4 +263,205 @@ class PulsarConnector:
                 
         except Exception as e:
             logger.error(f"Failed to get topic stats for {topic}: {e}")
-            return {} 
+            return {}
+
+    async def list_connectors(self, connector_type: str = "source") -> List[str]:
+        """List all connectors of specified type (source or sink)."""
+        try:
+            import requests
+            
+            if connector_type not in ["source", "sink"]:
+                logger.error(f"Invalid connector type: {connector_type}. Must be 'source' or 'sink'")
+                return []
+            
+            url = f"{settings.pulsar_web_service_url}/admin/v3/functions/public/default"
+            
+            headers = {}
+            if settings.pulsar_token:
+                headers['Authorization'] = f'Bearer {settings.pulsar_token}'
+            
+            response = requests.get(url, headers=headers)
+            
+            if response.status_code == 200:
+                all_functions = response.json()
+                # Filter for connectors by checking if they have connector-specific properties
+                connectors = []
+                
+                for func_name in all_functions:
+                    func_info = await self.get_connector_config(func_name)
+                    if func_info and self._is_connector(func_info, connector_type):
+                        connectors.append(func_name)
+                
+                logger.info(f"Found {len(connectors)} {connector_type} connectors")
+                return connectors
+            else:
+                logger.error(f"Failed to list connectors: {response.text}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Failed to list connectors: {e}")
+            return []
+
+    async def get_connector_status(self, connector_name: str) -> Dict[str, Any]:
+        """Get the status of a specific connector."""
+        try:
+            import requests
+            
+            # Try to get status as a function first (Pulsar IO connectors are functions)
+            url = f"{settings.pulsar_web_service_url}/admin/v3/functions/public/default/{connector_name}/status"
+            
+            headers = {}
+            if settings.pulsar_token:
+                headers['Authorization'] = f'Bearer {settings.pulsar_token}'
+            
+            response = requests.get(url, headers=headers)
+            
+            if response.status_code == 200:
+                status = response.json()
+                logger.info(f"Retrieved status for connector {connector_name}")
+                return {
+                    "connector_name": connector_name,
+                    "status": status,
+                    "type": "function"
+                }
+            else:
+                # Try source connector specific endpoint
+                source_url = f"{settings.pulsar_web_service_url}/admin/v3/sources/public/default/{connector_name}/status"
+                source_response = requests.get(source_url, headers=headers)
+                
+                if source_response.status_code == 200:
+                    status = source_response.json()
+                    logger.info(f"Retrieved source connector status for {connector_name}")
+                    return {
+                        "connector_name": connector_name,
+                        "status": status,
+                        "type": "source"
+                    }
+                
+                # Try sink connector specific endpoint
+                sink_url = f"{settings.pulsar_web_service_url}/admin/v3/sinks/public/default/{connector_name}/status"
+                sink_response = requests.get(sink_url, headers=headers)
+                
+                if sink_response.status_code == 200:
+                    status = sink_response.json()
+                    logger.info(f"Retrieved sink connector status for {connector_name}")
+                    return {
+                        "connector_name": connector_name,
+                        "status": status,
+                        "type": "sink"
+                    }
+                
+                logger.error(f"Failed to get connector status for {connector_name}: Function={response.text}, Source={source_response.text}, Sink={sink_response.text}")
+                return {}
+                
+        except Exception as e:
+            logger.error(f"Failed to get connector status for {connector_name}: {e}")
+            return {}
+
+    async def get_connector_config(self, connector_name: str) -> Dict[str, Any]:
+        """Get the configuration of a specific connector."""
+        try:
+            import requests
+            
+            # Try to get config as a function first
+            url = f"{settings.pulsar_web_service_url}/admin/v3/functions/public/default/{connector_name}"
+            
+            headers = {}
+            if settings.pulsar_token:
+                headers['Authorization'] = f'Bearer {settings.pulsar_token}'
+            
+            response = requests.get(url, headers=headers)
+            
+            if response.status_code == 200:
+                config = response.json()
+                logger.info(f"Retrieved config for connector {connector_name}")
+                return {
+                    "connector_name": connector_name,
+                    "config": config,
+                    "type": "function"
+                }
+            else:
+                # Try source connector specific endpoint
+                source_url = f"{settings.pulsar_web_service_url}/admin/v3/sources/public/default/{connector_name}"
+                source_response = requests.get(source_url, headers=headers)
+                
+                if source_response.status_code == 200:
+                    config = source_response.json()
+                    logger.info(f"Retrieved source connector config for {connector_name}")
+                    return {
+                        "connector_name": connector_name,
+                        "config": config,
+                        "type": "source"
+                    }
+                
+                # Try sink connector specific endpoint
+                sink_url = f"{settings.pulsar_web_service_url}/admin/v3/sinks/public/default/{connector_name}"
+                sink_response = requests.get(sink_url, headers=headers)
+                
+                if sink_response.status_code == 200:
+                    config = sink_response.json()
+                    logger.info(f"Retrieved sink connector config for {connector_name}")
+                    return {
+                        "connector_name": connector_name,
+                        "config": config,
+                        "type": "sink"
+                    }
+                
+                logger.error(f"Failed to get connector config for {connector_name}: Function={response.text}, Source={source_response.text}, Sink={sink_response.text}")
+                return {}
+                
+        except Exception as e:
+            logger.error(f"Failed to get connector config for {connector_name}: {e}")
+            return {}
+
+    def _is_connector(self, func_info: Dict[str, Any], connector_type: str) -> bool:
+        """Helper method to determine if a function is a connector of the specified type."""
+        if not func_info or "config" not in func_info:
+            return False
+        
+        config = func_info["config"]
+        
+        # Check for source connector indicators
+        if connector_type == "source":
+            return any([
+                "sourceDetails" in config,
+                "source" in config,
+                "source" in config.get("className", "").lower(),
+                "source" in config.get("archive", "").lower()
+            ])
+        
+        # Check for sink connector indicators  
+        elif connector_type == "sink":
+            return any([
+                "sinkDetails" in config,
+                "sink" in config,
+                "sink" in config.get("className", "").lower(),
+                "sink" in config.get("archive", "").lower()
+            ])
+        
+        return False
+
+    async def get_all_connectors(self) -> Dict[str, List[str]]:
+        """Get all connectors organized by type."""
+        try:
+            source_connectors = await self.list_connectors("source")
+            sink_connectors = await self.list_connectors("sink")
+            
+            return {
+                "source": source_connectors,
+                "sink": sink_connectors,
+                "total_source": len(source_connectors),
+                "total_sink": len(sink_connectors),
+                "total": len(source_connectors) + len(sink_connectors)
+            }
+        except Exception as e:
+            logger.error(f"Failed to get all connectors: {e}")
+            return {
+                "source": [],
+                "sink": [],
+                "total_source": 0,
+                "total_sink": 0,
+                "total": 0
+            }
+
+ 

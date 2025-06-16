@@ -8,6 +8,7 @@ A Model Context Protocol (MCP) server for Apache Pulsar that provides tools to i
 - **Consume Messages**: Receive messages from topics with configurable subscription settings
 - **Topic Management**: Create, delete, and list topics
 - **Topic Statistics**: Get detailed statistics and metadata about topics
+- **Connector Management**: List, get status, and configuration of Pulsar IO connectors
 - **Flexible Configuration**: Environment-based configuration with sensible defaults
 
 ## Installation
@@ -136,6 +137,29 @@ Get statistics and metadata about a topic.
 
 **Parameters:**
 - `topic` (string, required): Name of the topic to get stats for
+
+### pulsar_list_connectors
+List all connectors of a specified type (source or sink).
+
+**Parameters:**
+- `connector_type` (string, optional): Type of connectors to list ("source" or "sink", default: "source")
+
+### pulsar_connector_status
+Get the status of a specific connector.
+
+**Parameters:**
+- `connector_name` (string, required): Name of the connector to get status for
+
+### pulsar_connector_config
+Get the configuration of a specific connector.
+
+**Parameters:**
+- `connector_name` (string, required): Name of the connector to get configuration for
+
+### pulsar_all_connectors
+Get all connectors organized by type (source and sink).
+
+**Parameters:** None
 
 ## Development
 
